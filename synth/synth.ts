@@ -3382,9 +3382,11 @@ export class Song {
     private static readonly _latestSlarmoosBoxVersion: number = 5;
     private static readonly _oldestFroupBoxVersion: number = 1;
     private static readonly _latestFroupBoxVersion: number = 7;
+    private static readonly _oldestMatchBoxVersion: number = 1;
+    private static readonly _latestMatchBoxVersion: number = 7;
     // One-character variant detection at the start of URL to distinguish variants such as JummBox, Or Goldbox. "j" and "g" respectively
     //also "u" is ultrabox lol
-    private static readonly _variant = 0x66; //"f" ~ froupbox
+    private static readonly _variant = 0x6D; //m is for matchbox
 
     public title: string;
     public author: string;
@@ -3819,8 +3821,8 @@ export class Song {
         }
         buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
         buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 6], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
-        buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 6], base64IntToCharCode[this.tempo & 0x3F]);
-        buffer.push(SongTagCode.beatCount, base64IntToCharCode[this.beatsPerBar - 1]);
+        buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 12], base64IntToCharCode[(this.tempo >> 6) & 63], base64IntToCharCode[this.tempo & 0x3F]);
+        buffer.push(SongTagCode.beatCount, base64IntToCharCode[(this.beatsPerBar - 1) >> 6], base64IntToCharCode[(this.beatsPerBar - 1) & 0x3f]);
         buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
         buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 6], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
         buffer.push(SongTagCode.rhythm, base64IntToCharCode[this.rhythm]);
@@ -4659,6 +4661,7 @@ export class Song {
         let fromUltraBox: boolean = false;
         let fromSlarmoosBox: boolean = false;
         let fromFroupBox: boolean = false;
+        let fromMatchBox: boolean = false;
         // let fromMidbox: boolean;
         // let fromDogebox2: boolean;
         // let fromAbyssBox: boolean;
@@ -4687,6 +4690,9 @@ export class Song {
         } else if (variantTest == 0x66) { //"f"
             fromFroupBox = true;
             charIndex++;
+        } else if (variantTest == 0x6D) { //"m"
+            fromMatchBox = true;
+            charIndex++;
         } else {
             fromBeepBox = true;
         }
@@ -4697,6 +4703,7 @@ export class Song {
         if (fromUltraBox && (version == -1 || version > Song._latestUltraBoxVersion || version < Song._oldestUltraBoxVersion)) return;
         if (fromSlarmoosBox && (version == -1 || version > Song._latestSlarmoosBoxVersion || version < Song._oldestSlarmoosBoxVersion)) return;
         if (fromFroupBox && (version == -1 || version > Song._latestFroupBoxVersion || version < Song._oldestFroupBoxVersion)) return;
+        if (fromMatchBox && (version == -1 || version > Song._latestMatchBoxVersion || version < Song._oldestMatchBoxVersion)) return;
         const beforeTwo: boolean = version < 2;
         const beforeThree: boolean = version < 3;
         const beforeFour: boolean = version < 4;
@@ -4709,7 +4716,7 @@ export class Song {
         const forceSimpleFilter: boolean = (fromBeepBox && beforeNine || fromJummBox && beforeFive);
         let willLoadLegacySamplesForOldSongs: boolean = false;
 
-        if (fromFroupBox || fromSlarmoosBox || fromUltraBox || fromGoldBox) {
+        if (fromMatchBox || fromFroupBox || fromSlarmoosBox || fromUltraBox || fromGoldBox) {
             compressed = compressed.replaceAll("%7C", "|")
             var compressed_array = compressed.split("|");
             compressed = compressed_array.shift()!;
@@ -4824,7 +4831,7 @@ export class Song {
 
                 charIndex += songNameLength;
 
-                if (fromFroupBox && !beforeTwo) {
+                if (fromMatchBox || (fromFroupBox && !beforeTwo)) {
                     // Length of song author string
                     var songAuthorLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                     this.author = decodeURIComponent(compressed.substring(charIndex, charIndex + songAuthorLength));
@@ -4905,7 +4912,7 @@ export class Song {
                 }
             } break;
             case SongTagCode.scale: {
-                if (!fromFroupBox || beforeSeven) {
+                if (!fromMatchBox && (!fromFroupBox || beforeSeven)) {
                     this.scale = 0;
                     charIndex++;
                 } else {
@@ -4977,8 +4984,10 @@ export class Song {
                     this.tempo = [95, 120, 151, 190][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
                 } else if (beforeSeven && fromBeepBox) {
                     this.tempo = [88, 95, 103, 111, 120, 130, 140, 151, 163, 176, 190, 206, 222, 240, 259][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
-                } else {
+                } else if (!fromMatchBox) {
                     this.tempo = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                } else {
+                    this.tempo = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 }
                 this.tempo = clamp(Config.tempoMin, Config.tempoMax + 1, this.tempo);
             } break;
@@ -4996,8 +5005,10 @@ export class Song {
             case SongTagCode.beatCount: {
                 if (beforeThree && fromBeepBox) {
                     this.beatsPerBar = [6, 7, 8, 9, 10][base64CharCodeToInt[compressed.charCodeAt(charIndex++)]];
-                } else {
+                } else if (!fromMatchBox) {
                     this.beatsPerBar = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+                } else {
+                    this.beatsPerBar = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
                 }
                 this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, this.beatsPerBar));
             } break;
@@ -5072,7 +5083,7 @@ export class Song {
                 }
             } break;
             case SongTagCode.rhythm: {
-                if (!fromUltraBox && !fromSlarmoosBox && !fromFroupBox) {
+                if (!fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox) {
                     let newRhythm = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                     this.rhythm = clamp(0, Config.rhythms.length, newRhythm);
                     if (fromJummBox && beforeThree || fromBeepBox) {
@@ -5161,7 +5172,7 @@ export class Song {
             } break;
             case SongTagCode.preset: {
                 let presetValue: number
-                if (!fromFroupBox) {
+                if (!fromMatchBox && !fromFroupBox) {
                     presetValue = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 } else { 
                     presetValue = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 18) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -5224,7 +5235,7 @@ export class Song {
                     if (this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].type == InstrumentType.noise) {
                         this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator].chipNoise = clamp(0, Config.chipNoises.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     } else {
-                        if (fromFroupBox || fromSlarmoosBox || fromUltraBox) {
+                        if (fromMatchBox || fromFroupBox || fromSlarmoosBox || fromUltraBox) {
                             const chipWaveReal = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                             const chipWaveCounter = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
 
@@ -5300,7 +5311,7 @@ export class Song {
 
                     if (fromBeepBox || typeCheck == 0) {
                         instrument.eqFilterType = false;
-                        if (fromFroupBox || fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox)
+                        if (fromMatchBox || fromFroupBox || fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox)
                             typeCheck = base64CharCodeToInt[compressed.charCodeAt(charIndex++)]; // Skip to next to get control point count
                         const originalControlPointCount: number = typeCheck;
                         instrument.eqFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
@@ -5319,7 +5330,7 @@ export class Song {
 
                         // Get subfilters as well. Skip Index 0, is a copy of the base filter.
                         instrument.eqSubFilters[0] = instrument.eqFilter;
-                        if ((fromJummBox && !beforeFive) || (fromGoldBox && !beforeFour) || fromUltraBox || fromSlarmoosBox || fromFroupBox) {
+                        if ((fromJummBox && !beforeFive) || (fromGoldBox && !beforeFour) || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox) {
                             let usingSubFilterBitfield: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             for (let j: number = 0; j < Config.filterMorphCount - 1; j++) {
                                 if (usingSubFilterBitfield & (1 << j)) {
@@ -5352,7 +5363,7 @@ export class Song {
                 }
             } break;
             case SongTagCode.loopControls: {
-                if (fromFroupBox || fromSlarmoosBox || fromUltraBox) {
+                if (fromMatchBox || fromFroupBox || fromSlarmoosBox || fromUltraBox) {
                     if (beforeThree && fromUltraBox) {
                         // Still have to support the old and bad loop control data format written as a test, sigh.
                         const sampleLoopInfoEncodedLength = decode32BitNumber(compressed, charIndex);
@@ -5434,13 +5445,13 @@ export class Song {
                 const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                 const pregoldToEnvelope: number[] = [0, 1, 2, 4, 5, 6, 8, 9, 10, 12, 13, 14, 16, 17, 18, 19, 20, 21, 23, 24, 25, 27, 28, 29, 32, 33, 34, 31, 11];
                 if ((beforeNine && fromBeepBox) || (beforeFive && fromJummBox) || (beforeFour && fromGoldBox)) {
-                    if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)) {
+                    if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox)) {
 
                     }
                     if (instrument.type == InstrumentType.drumset) {
                         for (let i: number = 0; i < Config.drumCount; i++) {
                             let aa: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                            if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)) aa = pregoldToEnvelope[aa];
+                            if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox)) aa = pregoldToEnvelope[aa];
                             instrument.drumsetEnvelopes[i] = Song._envelopeFromLegacyIndex(aa).index;
                         }
                     } else {
@@ -5449,7 +5460,7 @@ export class Song {
                         // decides the closest possible approximation, so update it.
                         const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
                         let aa: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                        if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)) aa = pregoldToEnvelope[aa];
+                        if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox)) aa = pregoldToEnvelope[aa];
                         legacySettings.filterEnvelope = Song._envelopeFromLegacyIndex(aa);
                         instrument.convertLegacySettings(legacySettings, forceSimpleFilter);
                     }
@@ -5457,8 +5468,8 @@ export class Song {
                     // This tag is now only used for drumset filter envelopes.
                     for (let i: number = 0; i < Config.drumCount; i++) {
                         let aa: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                        if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)) aa = pregoldToEnvelope[aa];
-                        if (!fromSlarmoosBox && !fromFroupBox && aa >= 2) aa++; //2 for pitch
+                        if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox)) aa = pregoldToEnvelope[aa];
+                        if (!fromSlarmoosBox && !fromFroupBox && !fromMatchBox && aa >= 2) aa++; //2 for pitch
                         instrument.drumsetEnvelopes[i] = clamp(0, Config.envelopes.length, aa);
                     }
                 }
@@ -5481,7 +5492,7 @@ export class Song {
                     instrument.convertLegacySettings(legacySettings, forceSimpleFilter);
                 }
 
-                if ((fromUltraBox && !beforeFour) || fromSlarmoosBox || fromFroupBox) {
+                if ((fromUltraBox && !beforeFour) || fromSlarmoosBox || fromFroupBox || fromMatchBox) {
                     instrument.decimalOffset = clamp(0, 99 + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 }
 
@@ -5530,7 +5541,7 @@ export class Song {
                                 }
                             }
                         }
-                    } else if ((beforeFour && !fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox) || fromBeepBox) {
+                    } else if ((beforeFour && !fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox) || fromBeepBox) {
                         const settings = legacySettings[clamp(0, legacySettings.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
                         const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                         instrument.fadeIn = Synth.secondsToFadeInSetting(settings.fadeInSeconds);
@@ -5564,7 +5575,7 @@ export class Song {
                     const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                     instrument.fadeIn = clamp(0, Config.fadeInRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     instrument.fadeOut = clamp(0, Config.fadeOutTicks.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-                    if (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)
+                    if (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)
                         instrument.clicklessTransition = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
                 }
             } break;
@@ -5661,7 +5672,7 @@ export class Song {
                     }
                 } else {
                     // songeq
-                    if (fromFroupBox || (fromSlarmoosBox && !beforeFour)) { //double check that it's from a valid version
+                    if (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeFour)) { //double check that it's from a valid version
                         const originalControlPointCount: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         this.eqFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, originalControlPointCount);
                         for (let i: number = this.eqFilter.controlPoints.length; i < this.eqFilter.controlPointCount; i++) {
@@ -5767,7 +5778,7 @@ export class Song {
                     // until slarmoo's box added custom unisons, at which point it's 33
                     if (fromSlarmoosBox && !beforeFive) unisonLength = 33;
                     // or when froupbox adds more, bringing it to 49...
-                    else if (fromFroupBox) {
+                    else if (fromMatchBox || fromFroupBox) {
                         unisonLength = 49;
                         // ...well, in theory
                         if (Config.unisons.length !== unisonLength) {
@@ -5776,7 +5787,7 @@ export class Song {
                         }
                     }
                   
-                    if (((fromUltraBox && !beforeFive) || fromSlarmoosBox || fromFroupBox) && (instrument.unison == unisonLength)) {
+                    if (((fromUltraBox && !beforeFive) || fromSlarmoosBox || fromFroupBox || fromMatchBox) && (instrument.unison == unisonLength)) {
                         
                         // if (instrument.unison == Config.unisons.length) {
                         instrument.unison = Config.unisons.length;
@@ -5861,13 +5872,13 @@ export class Song {
                 } else {
                     // BeepBox currently uses four base64 characters at 6 bits each for a bitfield representing all the enabled effects.
                     if (EffectType.length > 24) throw new Error();
-                    if (fromFroupBox) {
+                    if (fromMatchBox || fromFroupBox) {
                       instrument.effects =
                         (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 18) |
                         (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) |
                         (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) |
                         (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-                    }else if (fromFroupBox || (fromSlarmoosBox && !beforeFive)) {
+                    }else if (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeFive)) {
                         instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     } else {
                         instrument.effects = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -5877,7 +5888,7 @@ export class Song {
                         let typeCheck: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         if (fromBeepBox || typeCheck == 0) {
                             instrument.noteFilterType = false;
-                            if (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)
+                            if (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)
                                 typeCheck = base64CharCodeToInt[compressed.charCodeAt(charIndex++)]; // Skip to next index in jummbox to get actual count
                             instrument.noteFilter.controlPointCount = clamp(0, Config.filterMaxPoints + 1, typeCheck);
                             for (let i: number = instrument.noteFilter.controlPoints.length; i < instrument.noteFilter.controlPointCount; i++) {
@@ -5895,7 +5906,7 @@ export class Song {
 
                             // Get subfilters as well. Skip Index 0, is a copy of the base filter.
                             instrument.noteSubFilters[0] = instrument.noteFilter;
-                            if ((fromJummBox && !beforeFive) || (fromGoldBox) || (fromUltraBox) || (fromSlarmoosBox) || fromFroupBox) {
+                            if ((fromJummBox && !beforeFive) || (fromGoldBox) || (fromUltraBox) || (fromSlarmoosBox) || fromFroupBox || fromMatchBox) {
                                 let usingSubFilterBitfield: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                                 for (let j: number = 0; j < Config.filterMorphCount - 1; j++) {
                                     if (usingSubFilterBitfield & (1 << j)) {
@@ -5929,24 +5940,24 @@ export class Song {
                     }
                     if (effectsIncludeTransition(instrument.effects)) {
                         instrument.transition = clamp(0, Config.transitions.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-                        if ((fromFroupBox && !beforeThree)) {
+                        if (fromMatchBox || (fromFroupBox && !beforeThree)) {
                             if (Config.transitions[instrument.transition].slides == true) instrument.slideTicks = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         }
                     }
                     if (effectsIncludeChord(instrument.effects)) {
                         instrument.chord = clamp(0, Config.chords.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                         // Custom arpeggio speed... only in JB, and only if the instrument arpeggiates.
-                        if (Config.chords[instrument.chord].arpeggiates == true && (fromJummBox||fromGoldBox||fromUltraBox || fromFroupBox)) {
+                        if (Config.chords[instrument.chord].arpeggiates == true && (fromJummBox||fromGoldBox||fromUltraBox || fromFroupBox || fromMatchBox)) {
                             instrument.arpeggioSpeed = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                             instrument.fastTwoNoteArp = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) ? true : false;
-                        } else if (instrument.chord == Config.chords.dictionary["monophonic"].index && ((fromSlarmoosBox && !beforeFive) || fromFroupBox)) {
+                        } else if (instrument.chord == Config.chords.dictionary["monophonic"].index && ((fromSlarmoosBox && !beforeFive) || fromFroupBox || fromMatchBox)) {
                             instrument.monoChordTone = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                        } else if (Config.chords[instrument.chord].strumParts > 0 && (fromFroupBox && !beforeThree)) {
+                        } else if (Config.chords[instrument.chord].strumParts > 0 && ((fromFroupBox && !beforeThree) || fromMatchBox)) {
                             instrument.strumParts = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         }
                     }
                     if (effectsIncludePitchShift(instrument.effects)) {
-                        if (fromFroupBox && !beforeSeven) {
+                        if (fromMatchBox || (fromFroupBox && !beforeSeven)) {
                             instrument.pitchShift = clamp(0, Config.pitchShiftRange, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             instrument.pitchShiftEquaveDivisions = clamp(Config.equaveDivisionsMin, Config.equaveDivisionsMax + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             instrument.pitchShiftEquaveNumerator = clamp(2, Config.equaveNumeratorMax, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -5973,7 +5984,7 @@ export class Song {
                         instrument.vibrato = clamp(0, Config.vibratos.length + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 
                         // Custom vibrato
-                        if (instrument.vibrato == Config.vibratos.length && (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)) {
+                        if (instrument.vibrato == Config.vibratos.length && (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)) {
                             instrument.vibratoDepth = clamp(0, Config.modulators.dictionary["vibrato depth"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) / 25;
                             instrument.vibratoSpeed = clamp(0, Config.modulators.dictionary["vibrato speed"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             instrument.vibratoDelay = clamp(0, Config.modulators.dictionary["vibrato delay"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
@@ -5989,7 +6000,7 @@ export class Song {
                     }
                     if (effectsIncludeDistortion(instrument.effects)) {
                         instrument.distortion = clamp(0, Config.distortionRange, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-                        if ((fromJummBox && !beforeFive) || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)
+                        if ((fromJummBox && !beforeFive) || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)
                             instrument.aliases = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] ? true : false;
                     }
                     if (effectsIncludeBitcrusher(instrument.effects)) {
@@ -6009,7 +6020,7 @@ export class Song {
                         }
 
                         // Now, pan delay follows on new versions of jummbox.
-                        if ((fromJummBox && !beforeTwo) || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)
+                        if ((fromJummBox && !beforeTwo) || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)
                             instrument.panDelay = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                     }
                     if (effectsIncludeChorus(instrument.effects)) {
@@ -6179,7 +6190,7 @@ export class Song {
                     const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                     // Volume is stored in two bytes in jummbox just in case range ever exceeds one byte, e.g. through later waffling on the subject.
                     instrument.volume = Math.round(clamp(-Config.volumeRange / 2, Config.volumeRange / 2 + 1, ((base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) | (base64CharCodeToInt[compressed.charCodeAt(charIndex++)])) - Config.volumeRange / 2));
-                    if (fromFroupBox && !beforeSeven) {
+                    if (fromMatchBox || (fromFroupBox && !beforeSeven)) {
                         instrument.volumePitchCompensation = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         instrument.volumeChordCompensation = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                     } else {
@@ -6197,7 +6208,7 @@ export class Song {
                     const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                     instrument.pan = clamp(0, Config.panMax + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     // Pan delay follows on v3 + v4
-                    if (fromJummBox && !beforeThree || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox) {
+                    if (fromJummBox && !beforeThree || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox) {
                         instrument.panDelay = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                     }
                 } else {
@@ -6265,10 +6276,11 @@ export class Song {
                 for (let channel: number = 0; channel < this.getChannelCount(); channel++) {
                     // Length of channel name string. Due to some crazy Unicode characters this needs to be 2 bytes...
                     var channelNameLength;
-                    if (beforeFour && !fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)
+                    if (beforeFour && !fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox) {
                         channelNameLength = base64CharCodeToInt[compressed.charCodeAt(charIndex++)]
-                    else
+                    } else {
                         channelNameLength = ((base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                    }
                     this.channels[channel].name = decodeURIComponent(compressed.substring(charIndex, charIndex + channelNameLength));
 
                     charIndex += channelNameLength;
@@ -6385,7 +6397,7 @@ export class Song {
                     const legacySettings: LegacySettings = legacySettingsCache![instrumentChannelIterator][instrumentIndexIterator];
 
                     let aa: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                    if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox)) aa = pregoldToEnvelope[aa];
+                    if ((beforeTwo && fromGoldBox) || (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox)) aa = pregoldToEnvelope[aa];
                     legacySettings.feedbackEnvelope = Song._envelopeFromLegacyIndex(base64CharCodeToInt[aa]);
                     instrument.convertLegacySettings(legacySettings, forceSimpleFilter);
                 } else {
@@ -6401,7 +6413,7 @@ export class Song {
                         instrument.operators[o].frequency = freqToGold3[clamp(0, freqToGold3.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)])];
                     }
                 }
-                else if (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox) {
+                else if (!fromGoldBox && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox) {
                     const freqToUltraBox = [4, 5, 6, 7, 8, 10, 12, 13, 14, 15, 16, 18, 20, 23, 27, 2, 1, 9, 17, 19, 21, 23, 0, 3];
 
                     for (let o = 0; o < (instrument.type == InstrumentType.fm6op ? 6 : Config.operatorCount); o++) {
@@ -6440,9 +6452,9 @@ export class Song {
                     const envelopeCount: number = clamp(0, Config.maxEnvelopeCount + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     // JB v6 adds some envelope options here in the sequence.
                     let envelopeDiscrete: boolean = false;
-                    if ((fromJummBox && !beforeSix) || (fromUltraBox && !beforeFive) || (fromSlarmoosBox) || fromFroupBox) {
+                    if ((fromJummBox && !beforeSix) || (fromUltraBox && !beforeFive) || (fromSlarmoosBox) || fromFroupBox || fromMatchBox) {
                         instrument.envelopeSpeed = clamp(0, Config.modulators.dictionary["envelope speed"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
-                        if ((!fromSlarmoosBox || beforeFive) && !fromFroupBox) {
+                        if ((!fromSlarmoosBox || beforeFive) && !fromFroupBox && !fromMatchBox) {
                             envelopeDiscrete = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) ? true : false;
                         }
                     }
@@ -6456,31 +6468,31 @@ export class Song {
                         let aa: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                         if ((beforeTwo && fromGoldBox) || (fromBeepBox)) aa = pregoldToEnvelope[aa];
                         if (fromJummBox) aa = jummToUltraEnvelope[aa];
-                        if (!fromFroupBox && !fromSlarmoosBox && aa >= 2) aa++; //2 for pitch
+                        if (!fromMatchBox && !fromFroupBox && !fromSlarmoosBox && aa >= 2) aa++; //2 for pitch
                         let updatedEnvelopes: boolean = false;
                         let perEnvelopeSpeed: number = 1;
-                        if (!fromFroupBox && (!fromSlarmoosBox || beforeThree)) {
+                        if (!fromMatchBox && !fromFroupBox && (!fromSlarmoosBox || beforeThree)) {
                             updatedEnvelopes = true;
                             perEnvelopeSpeed = Config.envelopes[aa].speed;
                             aa = Config.envelopes[aa].type; //update envelopes
-                        } else if (!fromFroupBox && beforeFour && aa >= 3) aa++; //3 for random
+                        } else if (!fromMatchBox && !fromFroupBox && beforeFour && aa >= 3) aa++; //3 for random
                         let isTremolo2: boolean = false;
                         if ((fromSlarmoosBox && !beforeThree && beforeFour) || updatedEnvelopes) { //remove tremolo2
                             if (aa == 9) isTremolo2 = true;
                             aa = slarURL3toURL4Envelope[aa];
                         }
-                        const envelope: number = clamp(0, ((fromFroupBox || (fromSlarmoosBox && !beforeThree) || updatedEnvelopes) ? Config.newEnvelopes.length : Config.envelopes.length), aa);
+                        const envelope: number = clamp(0, ((fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeThree) || updatedEnvelopes) ? Config.newEnvelopes.length : Config.envelopes.length), aa);
                         let pitchEnvelopeStart: number = 0;
                         let pitchEnvelopeEnd: number = 8;
                         let envelopeInverse: boolean = false;
-                        perEnvelopeSpeed = (fromFroupBox || (fromSlarmoosBox && !beforeThree)) ? Config.newEnvelopes[envelope].speed : perEnvelopeSpeed;
+                        perEnvelopeSpeed = (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeThree)) ? Config.newEnvelopes[envelope].speed : perEnvelopeSpeed;
                         let perEnvelopeLowerBound: number = 0;
                         let perEnvelopeUpperBound: number = 1;
                         let steps: number = 2;
                         let seed: number = 2;
                         let waveform: number = LFOEnvelopeTypes.sine;
                         //pull out unique envelope setting values first, then general ones
-                        if (fromFroupBox || (fromSlarmoosBox && !beforeFour)) {
+                        if (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeFour)) {
                             if (Config.newEnvelopes[envelope].name == "lfo") {
                                 waveform = clamp(0, LFOEnvelopeTypes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                                 if (waveform == LFOEnvelopeTypes.steppedSaw || waveform == LFOEnvelopeTypes.steppedTri) {
@@ -6492,7 +6504,7 @@ export class Song {
                                 waveform = clamp(0, RandomEnvelopeTypes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]); //we use waveform for the random type as well
                             }
                         }
-                        if (fromFroupBox || (fromSlarmoosBox && !beforeThree)) {
+                        if (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeThree)) {
                             if (Config.newEnvelopes[envelope].name == "pitch") {
                                 if (!instrument.isNoiseInstrument) {
                                     let pitchEnvelopeCompact: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
@@ -6505,7 +6517,7 @@ export class Song {
                                 }
                             }
                             let checkboxValues: number = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                            if (fromFroupBox || (fromSlarmoosBox && !beforeFive)) {
+                            if (fromMatchBox || fromFroupBox || (fromSlarmoosBox && !beforeFive)) {
                                 envelopeDiscrete = (checkboxValues >> 1) == 1 ? true : false;
                             }
                             envelopeInverse = (checkboxValues & 1) == 1 ? true : false;
@@ -6515,7 +6527,7 @@ export class Song {
                             perEnvelopeLowerBound = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] / 10;
                             perEnvelopeUpperBound = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] / 10;
                         }
-                        if ((!fromSlarmoosBox && !fromFroupBox) || beforeFour) { //update tremolo2
+                        if ((!fromSlarmoosBox && !fromFroupBox && !fromMatchBox) || beforeFour) { //update tremolo2
                             if (isTremolo2) {
                                 waveform = LFOEnvelopeTypes.sine;
                                 if (envelopeInverse) {
@@ -6631,7 +6643,7 @@ export class Song {
                         instrument.effects |= 1 << EffectType.distortion;
                     }
                 } else {
-                    if (fromUltraBox || fromSlarmoosBox || fromFroupBox) {
+                    if (fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox) {
                         const instrument: Instrument = this.channels[instrumentChannelIterator].instruments[instrumentIndexIterator];
                         instrument.decimalOffset = clamp(0, 50 + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                     }
@@ -6927,6 +6939,8 @@ export class Song {
                                         shape.initialSize = bits.read(11); //mod channels use 11 bits for 2000 tempo now
                                     } else if (fromFroupBox) {
                                         shape.initialSize = bits.read(13); //mod channels use 13 bits for 8000 flanger delay now
+                                    } else if (fromMatchBox) {
+                                        shape.initialSize = bits.read(17); //mod channels use 17 bits for 100,000 tempo now
                                     } else {
                                         shape.initialSize = bits.read(9);
                                     }
@@ -6950,6 +6964,8 @@ export class Song {
                                             pinObj.size = bits.read(11); //mod channels use 11 bits for 2000 tempo now
                                         } else if (fromFroupBox) {
                                             pinObj.size = bits.read(13); //mod channels use 13 bits for 8000 flanger delay now
+                                        } else if (fromMatchBox) {
+                                            pinObj.size = bits.read(17); //mod channels use 17 bits for 100,000 tempo now
                                         } else {
                                             pinObj.size = bits.read(9);
                                         }
@@ -7049,7 +7065,7 @@ export class Song {
                                     if (!((beforeNine && fromBeepBox) || (beforeFive && fromJummBox) || (beforeFour && fromGoldBox))) {
                                         note.continuesLastPattern = (bits.read(1) == 1);
                                     } else {
-                                        if ((beforeFour && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox) || fromBeepBox) {
+                                        if ((beforeFour && !fromUltraBox && !fromSlarmoosBox && !fromFroupBox && !fromMatchBox) || fromBeepBox) {
                                             note.continuesLastPattern = false;
                                         } else {
                                             note.continuesLastPattern = channel.instruments[newPattern.instruments[0]].legacyTieOver;

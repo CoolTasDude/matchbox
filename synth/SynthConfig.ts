@@ -980,12 +980,12 @@ export class Config {
         { name: "A", isWhiteKey: true, basePitch: 21 },
         { name: "A♯", isWhiteKey: false, basePitch: 22 },
         { name: "B", isWhiteKey: true, basePitch: 23 },
-    ]);
+    ]); 
     public static readonly blackKeyNameParents: ReadonlyArray<number> = [-1, 1, -1, 1, -1, 1, -1, -1, 1, -1, 1, -1];
     public static readonly tempoMin:                    number = 1;
-    public static readonly tempoMax:                    number = 2000; //slarmoo 500
-    public static readonly octaveMin:                   number = -8; //slarmoo -2
-    public static readonly octaveMax:                   number = 8; //slarmoo 2
+    public static readonly tempoMax:                    number = 200000; //slarmoo 500, froup 2000
+    public static readonly octaveMin:                   number = -16; //slarmoo -2, froup -8
+    public static readonly octaveMax:                   number = 16; //slarmoo 2, froup 8
     public static readonly echoDelayRange:              number = 24;
     public static readonly echoDelayStepTicks:          number = 4;
     public static readonly echoSustainRange:            number = 8;
@@ -993,7 +993,7 @@ export class Config {
     public static readonly echoShelfGain:               number = Math.pow(2.0, -0.5);
     public static readonly reverbShelfHz:               number = 8000.0; // The cutoff freq of the shelf filter that is used to decay reverb.
     public static readonly reverbShelfGain:             number = Math.pow(2.0, -1.5);
-    public static readonly reverbRange:                 number = 32;
+    public static readonly reverbRange:                 number = 32; //froup 32
     public static readonly reverbDelayBufferSize:       number = 16384; // TODO: Compute a buffer size based on sample rate.
     public static readonly reverbDelayBufferMask:       number = Config.reverbDelayBufferSize - 1; // TODO: Compute a buffer size based on sample rate.
     public static readonly phaserMixRange:              number = 32; 
@@ -1012,12 +1012,12 @@ export class Config {
     public static readonly flangerPanMax:               number = Config.flangerPanCenter * 2;
     public static readonly flangerFeedmixRange:         number = 64; 
     public static readonly beatsPerBarMin:              number = 1;
-    public static readonly beatsPerBarMax:              number = 64;
+    public static readonly beatsPerBarMax:              number = 256; //slarmoo: 64
     public static readonly barCountMin:                 number = 1;
-    public static readonly barCountMax:                 number = 4096; //slarmoo: 1024
+    public static readonly barCountMax:                 number = 100000; //slarmoo: 1024, froupbox: 4096
     public static readonly instrumentCountMin:          number = 1;
-    public static readonly layeredInstrumentCountMax:   number = 10;
-    public static readonly patternInstrumentCountMax:   number = 10;
+    public static readonly layeredInstrumentCountMax:   number = 20; //froupbox: 10
+    public static readonly patternInstrumentCountMax:   number = 20; //froupbox: 10
 	public static readonly partsPerBeat:                number = 24;
 	public static readonly ticksPerPart:                number = 2;
 	public static readonly ticksPerArpeggio:            number = 3;
@@ -1186,9 +1186,9 @@ export class Config {
     public static readonly filterGainRange: number = 15;
     public static readonly filterGainCenter: number = 7;
     public static readonly filterGainStep: number = 1.0 / 2.0;
-    public static readonly filterMaxPoints: number = 12;
+    public static readonly filterMaxPoints: number = 34; //froupbox: 12
     public static readonly filterTypeNames: ReadonlyArray<string> = ["low-pass", "high-pass", "peak"]; // See FilterType enum above.
-    public static readonly filterMorphCount: number = 10; // Number of filter shapes allowed for modulating between. Counts the 0/default position.
+    public static readonly filterMorphCount: number = 20; //froupbox: 10 Number of filter shapes allowed for modulating between. Counts the 0/default position.
 
     public static readonly filterSimpleCutRange: number = 11;
     public static readonly filterSimplePeakRange: number = 8;
@@ -1449,9 +1449,18 @@ export class Config {
         //50 and 100 are from dogebox
         //128 and 256 from slarmoo's box
         { name: "128×", mult: 128.0, hzOffset: 0.0, amplitudeSign: 1.0 },
-        //256× was mistakenly 250×. 250× has been left for preservationof old songs
+        //256× was mistakenly 250×. 250× has been left for preservation of old songs
         { name: "250×", mult: 250.0, hzOffset: 0.0, amplitudeSign: 1.0},
         { name: "256×", mult: 256.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        //matchbox
+        { name: "512×", mult: 512.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        { name: "2^10×", mult: 1024.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        { name: "2^12×", mult: 4096.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        { name: "2^16×", mult: 65536.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        { name: "2^20×", mult: 1048576.0, hzOffset: 0.0, amplitudeSign: 1.0},
+        { name: "2^28⚠", mult: 268435456.0, hzOffset: 0.0, amplitudeSign: 0.000000001},
+        { name: "2^42⚠", mult: 4398046511104.0, hzOffset: 0.0, amplitudeSign: 0.0000000000000001},
+        { name: "⚠⚠⚠⚠", mult: 1180591620717411303424.0, hzOffset: 0.0, amplitudeSign: 1.0}, //2^70
     ]);
 
     //still used for drumsets
@@ -1648,7 +1657,7 @@ export class Config {
     public static readonly detuneCenter: number = 200;
     public static readonly detuneMax: number = 400;
     public static readonly detuneMin: number = 0;
-    public static readonly equaveDivisionsMax: number = 128;
+    public static readonly equaveDivisionsMax: number = 256; //froupbox 128
     public static readonly equaveDivisionsMin: number = 1;
     public static readonly equaveNumeratorMax: number = 4096;
     public static readonly equaveDenominatorMax: number = 4096;
@@ -1884,7 +1893,7 @@ export class Config {
     public static readonly bitcrusherOctaveStep: number = 0.5;
     public static readonly bitcrusherQuantizationRange: number = 8;
 
-    public static readonly maxEnvelopeCount: number = 16;
+    public static readonly maxEnvelopeCount: number = 63; //froop/slarmoo 16
     public static readonly defaultAutomationRange: number = 13;
     public static readonly instrumentAutomationTargets: DictionaryArray<AutomationTarget> = toNameMap([
         { name: "none",                   computeIndex: null,                                           displayName: "none",             perNote: false, interleave: false, isFilter: false, /*range: 0,                              */    maxCount: 1, effect: null, compatibleInstruments: null },
