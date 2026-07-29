@@ -5525,8 +5525,8 @@ export class ChangeSongDescription extends Change {
 export class ChangeChannelName extends Change {
     constructor(doc: SongDocument, oldValue: string, newValue: string) {
         super();
-        if (newValue.length > 15) {
-            newValue = newValue.substring(0, 15);
+        if (newValue.length > 32) {
+            newValue = newValue.substring(0, 32);
         }
 
         doc.song.channels[doc.muteEditorChannel].name = newValue;

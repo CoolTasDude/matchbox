@@ -60,8 +60,8 @@ export class MuteEditor {
 
     private _channelNameInputWhenInput = (): void => {
         let newValue = this._channelNameInput.input.value;
-        if (newValue.length > 15) {
-            this._channelNameInput.input.value = newValue.substring(0, 15);
+        if (newValue.length > 32) {
+            this._channelNameInput.input.value = newValue.substring(0, 32);
         }
     }
 
