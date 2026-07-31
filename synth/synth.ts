@@ -3386,7 +3386,7 @@ export class Song {
     private static readonly _latestMatchBoxVersion: number = 7;
     // One-character variant detection at the start of URL to distinguish variants such as JummBox, Or Goldbox. "j" and "g" respectively
     //also "u" is ultrabox lol
-    private static readonly _variant = 0x6D; //m is for matchbox
+    private static readonly _variant = 0x58; //X is forrrrr uhhhhhhhh. uhhhhhhhhhhhhhhh yea.
 
     public title: string;
     public author: string;
@@ -4690,7 +4690,7 @@ export class Song {
         } else if (variantTest == 0x66) { //"f"
             fromFroupBox = true;
             charIndex++;
-        } else if (variantTest == 0x6D) { //"m"
+        } else if (variantTest == 0x58) { //"X"
             fromMatchBox = true;
             charIndex++;
         } else {
