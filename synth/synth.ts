@@ -3798,7 +3798,11 @@ export class Song {
             buffer.push(encodedDescriptionTitle.charCodeAt(i));
         }
 
-        buffer.push(SongTagCode.channelCount, base64IntToCharCode[this.pitchChannelCount], base64IntToCharCode[this.noiseChannelCount], base64IntToCharCode[this.modChannelCount]);
+        buffer.push(SongTagCode.channelCount, 
+            base64IntToCharCode[this.pitchChannelCount >> 6], base64IntToCharCode[this.pitchChannelCount & 0x3f], 
+            base64IntToCharCode[this.noiseChannelCount >> 6], base64IntToCharCode[this.noiseChannelCount & 0x3f], 
+            base64IntToCharCode[this.modChannelCount >> 6], base64IntToCharCode[this.modChannelCount & 0x3f]
+        );
         buffer.push(SongTagCode.scale, base64IntToCharCode[this.scale]);
         if (this.scale == Config.scales["dictionary"]["Custom"].index) {
             var encodedCustomScale: string = encodeURIComponent(this.scaleCustom);
@@ -4888,12 +4892,19 @@ export class Song {
 
             } break;
             case SongTagCode.channelCount: {
-                this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                this.noiseChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                if (!fromMatchBox) {
+                    this.pitchChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                    this.noiseChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                } else {   
+                    this.pitchChannelCount = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                    this.noiseChannelCount = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                    this.modChannelCount = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                }
+                
                 if (fromBeepBox || (fromJummBox && beforeTwo)) {
                     // No mod channel support before jummbox v2
                     this.modChannelCount = 0;
-                } else {
+                } else if (!fromMatchBox){
                     this.modChannelCount = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
                 }
                 this.pitchChannelCount = validateRange(Config.pitchChannelCountMin, Config.pitchChannelCountMax, this.pitchChannelCount);

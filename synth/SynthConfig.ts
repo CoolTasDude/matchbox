@@ -1641,11 +1641,11 @@ export class Config {
 	public static readonly supersawSpreadMax: number = 12;
 	public static readonly supersawShapeMax: number = 6;
     public static readonly pitchChannelCountMin: number = 1;
-    public static readonly pitchChannelCountMax: number = 60; //slarmoo: 60
+    public static readonly pitchChannelCountMax: number = 200; //slarmoo: 60
     public static readonly noiseChannelCountMin: number = 0;
-    public static readonly noiseChannelCountMax: number = 60; //slarmoo: 60
+    public static readonly noiseChannelCountMax: number = 200; //slarmoo: 60
     public static readonly modChannelCountMin: number = 0;
-    public static readonly modChannelCountMax: number = 60; //slarmoo: 60
+    public static readonly modChannelCountMax: number = 200; //slarmoo: 60
     public static readonly noiseInterval: number = 6;
     public static readonly drumCount: number = 12;
     public static readonly pitchOctaves: number = 8;
