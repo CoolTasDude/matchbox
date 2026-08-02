@@ -800,17 +800,29 @@ export class SongEditor {
     );
     private readonly _optionsMenu: HTMLSelectElement = select({ style: "width: 100%;" },
         option({ selected: true, disabled: true, hidden: false }, "Preferences"), // todo: "hidden" should be true but looks wrong on mac chrome, adds checkmark next to first visible option even though it's not selected. :(
+        optgroup({ label: "UI/Interface" },
+            //option({ value: "enableChannelMuting" }, "Enable Channel Muting"),
+            option({ value: "instrumentCopyPaste" }, "Enable Copy/Paste Buttons"),
+            option({ value: "instrumentImportExport" }, "Enable Import/Export Buttons"),
+            option({ value: "instrumentButtonsAtTop" }, "Instrument Buttons at Top"),
+            //option({ value: "showScrollBar" }, "Show Octave Scroll Bar"),
+            option({ value: "showInstrumentScrollbars" }, "Show Intsrument Scrollbars"),
+            //option({ value: "showLetters" }, "Show Piano Keys"),
+            option({ value: "displayVolumeBar" }, "Show Playback Volume"),
+            option({ value: "showOscilloscope" }, "Show Oscilloscope"),
+            option({ value: "showSampleLoadingStatus" }, "Show Sample Loading Status"),
+            option({ value: "showChannelName" }, "Show Channel Name"),
+            option({ value: "showChannelTuning" }, "Show Channel Tuning"),
+            option({ value: "showDescription" }, "Show Description"),
+        ), 
         optgroup({ label: "Technical" },
-            option({ value: "autoPlay" }, "Auto Play on Load"),
+            //option({ value: "autoPlay" }, "Auto Play on Load"),
             option({ value: "autoFollow" }, "Auto Follow Playhead"),
             option({ value: "enableNotePreview" }, "Hear Added Notes"),
             option({ value: "notesOutsideScale" }, "Place Notes Out of Scale"),
             option({ value: "notesOutsideBar" }, "Place Notes Out of Bar"),
             option({ value: "setDefaultScale" }, "Set Current Scale as Default"),
             option({ value: "alwaysFineNoteVol" }, "Always Fine Note Volume"),
-            option({ value: "enableChannelMuting" }, "Enable Channel Muting"),
-            option({ value: "instrumentCopyPaste" }, "Enable Copy/Paste Buttons"),
-            option({ value: "instrumentImportExport" }, "Enable Import/Export Buttons"),
             option({ value: "displayBrowserUrl" }, "Enable Song Data in URL"),
             option({ value: "closePromptByClickoff" }, "Close Prompts on Click Off"),
             option({ value: "rollNoveltyPresets" }, "Can Randomly Select Novelty Presets"),
@@ -820,19 +832,9 @@ export class SongEditor {
         optgroup({ label: "Appearance" },
             option({ value: "showFifth" }, 'Highlight "Fifth" Note'),
             option({ value: "notesFlashWhenPlayed" }, "Notes Flash When Played"),
-            option({ value: "instrumentButtonsAtTop" }, "Instrument Buttons at Top"),
             option({ value: "frostedGlassBackground" }, "Frosted Glass Prompt Backdrop"),
             option({ value: "showChannels" }, "Show All Channels"),
-            option({ value: "showScrollBar" }, "Show Octave Scroll Bar"),
-            option({ value: "showInstrumentScrollbars" }, "Show Intsrument Scrollbars"),
-            option({ value: "showLetters" }, "Show Piano Keys"),
-            option({ value: "displayVolumeBar" }, "Show Playback Volume"),
-            option({ value: "showOscilloscope" }, "Show Oscilloscope"),
-            option({ value: "showSampleLoadingStatus" }, "Show Sample Loading Status"),
             option({ value: "bisectionalModNotes" }, "Use Bisectional Mod Notes"),
-            option({ value: "showChannelName" }, "Show Channel Name"),
-            option({ value: "showChannelTuning" }, "Show Channel Tuning"),
-            option({ value: "showDescription" }, "Show Description"),
             option({ value: "layout" }, "Set Layout..."),
             option({ value: "colorTheme" }, "Set Theme..."),
 	        option({ value: "customTheme" }, "Custom Theme..."),
@@ -2699,17 +2701,28 @@ export class SongEditor {
         const textOffIcon: string = ColorConfig.getComputed("--text-disabled-icon");
         const textSpacingIcon: string = ColorConfig.getComputed("--text-spacing-icon");
         const optionCommands: ReadonlyArray<string> = [
+            "UI/Interface",
+            //(prefs.enableChannelMuting ? textOnIcon : textOffIcon) + "Enable Channel Muting",
+            (prefs.instrumentCopyPaste ? textOnIcon : textOffIcon) + "Enable Copy/Paste Buttons",
+            (prefs.instrumentImportExport ? textOnIcon : textOffIcon) + "Enable Import/Export Buttons",
+            (prefs.instrumentButtonsAtTop ? textOnIcon : textOffIcon) + "Instrument Buttons at Top",
+            //(prefs.showScrollBar ? textOnIcon : textOffIcon) + "Show Octave Scroll Bar",
+            (prefs.showInstrumentScrollbars ? textOnIcon : textOffIcon) + "Show Instrument Scrollbars",
+            //(prefs.showLetters ? textOnIcon : textOffIcon) + "Show Piano Keys",
+            (prefs.displayVolumeBar ? textOnIcon : textOffIcon) + "Show Playback Volume",
+            (prefs.showOscilloscope ? textOnIcon : textOffIcon) + "Show Oscilloscope",
+            (prefs.showSampleLoadingStatus ? textOnIcon : textOffIcon) + "Show Sample Loading Status",
+            (prefs.showChannelName ? textOnIcon : textOffIcon) + "Show Channel Name",
+            (prefs.showChannelTuning ? textOnIcon : textOffIcon) + "Show Channel Tuning",
+            (prefs.showDescription ? textOnIcon : textOffIcon) + "Show Description",
             "Technical",
-            (prefs.autoPlay ? textOnIcon : textOffIcon) + "Auto Play on Load",
+            //(prefs.autoPlay ? textOnIcon : textOffIcon) + "Auto Play on Load",
             (prefs.autoFollow ? textOnIcon : textOffIcon) + "Auto Follow Playhead",
             (prefs.enableNotePreview ? textOnIcon : textOffIcon) + "Hear Added Notes",
             (prefs.notesOutsideScale ? textOnIcon : textOffIcon) + "Place Notes Out of Scale",
             (prefs.notesOutsideBar ? textOnIcon : textOffIcon) + "Place Notes Out of Bar",
             (prefs.defaultScale == this.doc.song.scale ? textOnIcon : textOffIcon) + "Set Current Scale as Default",
             (prefs.alwaysFineNoteVol ? textOnIcon : textOffIcon) + "Always Fine Note Volume",
-            (prefs.enableChannelMuting ? textOnIcon : textOffIcon) + "Enable Channel Muting",
-            (prefs.instrumentCopyPaste ? textOnIcon : textOffIcon) + "Enable Copy/Paste Buttons",
-            (prefs.instrumentImportExport ? textOnIcon : textOffIcon) + "Enable Import/Export Buttons",
             (prefs.displayBrowserUrl ? textOnIcon : textOffIcon) + "Enable Song Data in URL",
             (prefs.closePromptByClickoff ? textOnIcon : textOffIcon) + "Close Prompts on Click Off",
             (prefs.rollNoveltyPresets ? textOnIcon : textOffIcon) + "Can Randomly Select Novelty Presets",
@@ -2718,19 +2731,9 @@ export class SongEditor {
             textSpacingIcon + "Appearance",
             (prefs.showFifth ? textOnIcon : textOffIcon) + 'Highlight "Fifth" Note',
             (prefs.notesFlashWhenPlayed ? textOnIcon : textOffIcon) + "Notes Flash When Played",
-            (prefs.instrumentButtonsAtTop ? textOnIcon : textOffIcon) + "Instrument Buttons at Top",
             (prefs.frostedGlassBackground ? textOnIcon : textOffIcon) + "Frosted Glass Prompt Backdrop",
             (prefs.showChannels ? textOnIcon : textOffIcon) + "Show All Channels",
-            (prefs.showScrollBar ? textOnIcon : textOffIcon) + "Show Octave Scroll Bar",
-            (prefs.showInstrumentScrollbars ? textOnIcon : textOffIcon) + "Show Instrument Scrollbars",
-            (prefs.showLetters ? textOnIcon : textOffIcon) + "Show Piano Keys",
-            (prefs.displayVolumeBar ? textOnIcon : textOffIcon) + "Show Playback Volume",
-            (prefs.showOscilloscope ? textOnIcon : textOffIcon) + "Show Oscilloscope",
-            (prefs.showSampleLoadingStatus ? textOnIcon : textOffIcon) + "Show Sample Loading Status",
             (prefs.bisectionalModNotes ? textOnIcon : textOffIcon) + "Use Bisectional Mod Notes",
-            (prefs.showChannelName ? textOnIcon : textOffIcon) + "Show Channel Name",
-            (prefs.showChannelTuning ? textOnIcon : textOffIcon) + "Show Channel Tuning",
-            (prefs.showDescription ? textOnIcon : textOffIcon) + "Show Description",
             textSpacingIcon + "Set Layout...",
             textSpacingIcon + "Set Theme...",
 	        textSpacingIcon + "Custom Theme...",
@@ -5261,6 +5264,38 @@ export class SongEditor {
                     event.preventDefault();
                 }
                 break;
+            case 84: // t
+                if (canPlayNotes) break;
+                if (event.shiftKey && event.ctrlKey && event.altKey) {
+                    // Ctrl Alt Shift t: tasify - take a guess lol
+                    this.doc.prefs.autoPlay = false;
+                    this.doc.prefs.autoFollow = true;
+                    this.doc.prefs.enableNotePreview = true;
+                    this.doc.prefs.showFifth = true;
+                    this.doc.prefs.notesOutsideScale = true;
+                    this.doc.prefs.defaultScale = 0;
+                    this.doc.prefs.showLetters = true;
+                    this.doc.prefs.showChannels = true;
+                    this.doc.prefs.showScrollBar = true;
+                    this.doc.prefs.alwaysFineNoteVol = true;
+                    this.doc.prefs.enableChannelMuting = true;
+                    this.doc.prefs.displayBrowserUrl = true;
+                    this.doc.prefs.displayVolumeBar = true;
+                    this.doc.prefs.layout = "long";
+                    this.doc.prefs.visibleOctaves = 4;
+                    this.doc.prefs.closePromptByClickoff = true;
+                    this.doc.prefs.colorTheme = "violet verdant";
+                    this.doc.prefs.frostedGlassBackground = false;
+                    this.doc.prefs.instrumentButtonsAtTop = true;
+                    this.doc.prefs.instrumentCopyPaste = true;
+                    this.doc.prefs.instrumentImportExport = true;
+                    this.doc.prefs.notesFlashWhenPlayed = true;
+                    this.doc.prefs.showOscilloscope = true;
+                    this.doc.prefs.rollNoveltyPresets = true;
+                    this.doc.prefs.save();
+                    event.preventDefault();
+                    location.reload();
+                }
             case 221: // right brace
                 if (canPlayNotes) break;
                 if (needControlForShortcuts == (event.ctrlKey || event.metaKey)) {
