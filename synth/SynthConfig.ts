@@ -1662,7 +1662,7 @@ export class Config {
     public static readonly detuneCenter: number = 200;
     public static readonly detuneMax: number = 400;
     public static readonly detuneMin: number = 0;
-    public static readonly equaveDivisionsMax: number = 256; //froupbox 128
+    public static readonly equaveDivisionsMax: number = 4095; //froupbox 128
     public static readonly equaveDivisionsMin: number = 1;
     public static readonly equaveNumeratorMax: number = 4096;
     public static readonly equaveDenominatorMax: number = 4096;
