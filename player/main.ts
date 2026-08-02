@@ -993,6 +993,12 @@ import { SongPlayerLayout } from "./Layout";
 					event.preventDefault();
 				}
 				break;
+			case 85: // u
+				if (event.shiftKey) {
+					shortenUrl();
+					event.preventDefault();
+				}
+			break;
 			case 67: // c
 				if (!event.ctrlKey && !event.metaKey) onCopyClicked();
 				break;
