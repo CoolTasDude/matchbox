@@ -3823,12 +3823,12 @@ export class Song {
             buffer.push(base64IntToCharCode[this.channels[channelIndex].equaveNumerator >> 6], base64IntToCharCode[this.channels[channelIndex].equaveNumerator & 63]);
             buffer.push(base64IntToCharCode[this.channels[channelIndex].equaveDenominator >> 6], base64IntToCharCode[this.channels[channelIndex].equaveDenominator & 63]);
         }
-        buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 6], base64IntToCharCode[this.loopStart & 0x3f]);
-        buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 6], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
+        buffer.push(SongTagCode.loopStart, base64IntToCharCode[this.loopStart >> 12], base64IntToCharCode[(this.loopStart >> 6) & 63], base64IntToCharCode[this.loopStart & 0x3F]);
+        buffer.push(SongTagCode.loopEnd, base64IntToCharCode[(this.loopLength - 1) >> 12], base64IntToCharCode[((this.loopLength - 1) >> 6) & 63], base64IntToCharCode[(this.loopLength - 1) & 0x3f]);
         buffer.push(SongTagCode.tempo, base64IntToCharCode[this.tempo >> 12], base64IntToCharCode[(this.tempo >> 6) & 63], base64IntToCharCode[this.tempo & 0x3F]);
         buffer.push(SongTagCode.beatCount, base64IntToCharCode[(this.beatsPerBar - 1) >> 6], base64IntToCharCode[(this.beatsPerBar - 1) & 0x3f]);
-        buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 6], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
-        buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 6], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
+        buffer.push(SongTagCode.barCount, base64IntToCharCode[(this.barCount - 1) >> 12], base64IntToCharCode[((this.barCount - 1) >> 6) & 63], base64IntToCharCode[(this.barCount - 1) & 0x3f]);
+        buffer.push(SongTagCode.patternCount, base64IntToCharCode[(this.patternsPerChannel - 1) >> 12], base64IntToCharCode[((this.patternsPerChannel - 1) >> 6) & 63], base64IntToCharCode[(this.patternsPerChannel - 1) & 0x3f]);
         buffer.push(SongTagCode.rhythm, base64IntToCharCode[this.rhythm]);
 
         // Push limiter settings, but only if they aren't the default!
@@ -4979,15 +4979,19 @@ export class Song {
             case SongTagCode.loopStart: {
                 if (beforeFive && fromBeepBox) {
                     this.loopStart = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                } else {
+                } else if (!fromMatchBox) {
                     this.loopStart = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
+                } else {
+                    this.loopStart = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                 }
             } break;
             case SongTagCode.loopEnd: {
                 if (beforeFive && fromBeepBox) {
                     this.loopLength = base64CharCodeToInt[compressed.charCodeAt(charIndex++)];
-                } else {
+                } else if (!fromMatchBox) {
                     this.loopLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+                } else {
+                    this.loopLength = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) + 1;
                 }
             } break;
             case SongTagCode.tempo: {
@@ -5024,21 +5028,34 @@ export class Song {
                 this.beatsPerBar = Math.max(Config.beatsPerBarMin, Math.min(Config.beatsPerBarMax, this.beatsPerBar));
             } break;
             case SongTagCode.barCount: {
-                const barCount: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
-                this.barCount = validateRange(Config.barCountMin, Config.barCountMax, barCount);
-                for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
-                    for (let bar = this.channels[channelIndex].bars.length; bar < this.barCount; bar++) {
-                        this.channels[channelIndex].bars[bar] = (bar < 4) ? 1 : 0;
+                if (!fromMatchBox) {
+                    const barCount: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+                    this.barCount = validateRange(Config.barCountMin, Config.barCountMax, barCount);
+                    for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+                        for (let bar = this.channels[channelIndex].bars.length; bar < this.barCount; bar++) {
+                            this.channels[channelIndex].bars[bar] = (bar < 4) ? 1 : 0;
+                        }
+                        this.channels[channelIndex].bars.length = this.barCount;
                     }
-                    this.channels[channelIndex].bars.length = this.barCount;
+                } else {
+                    const barCount: number = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) + 1;
+                    this.barCount = validateRange(Config.barCountMin, Config.barCountMax, barCount);
+                    for (let channelIndex: number = 0; channelIndex < this.getChannelCount(); channelIndex++) {
+                        for (let bar = this.channels[channelIndex].bars.length; bar < this.barCount; bar++) {
+                            this.channels[channelIndex].bars[bar] = (bar < 4) ? 1 : 0;
+                        }
+                        this.channels[channelIndex].bars.length = this.barCount;
+                    }
                 }
             } break;
             case SongTagCode.patternCount: {
                 let patternsPerChannel: number;
                 if (beforeEight && fromBeepBox) {
                     patternsPerChannel = base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+                } else if (!fromMatchBox) {
+                    patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) + 1;
                 } else {
-                    patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)] + 1;
+                    patternsPerChannel = (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 12) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + (base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) + 1;
                 }
                 this.patternsPerChannel = validateRange(1, Config.barCountMax, patternsPerChannel);
                 const channelCount: number = this.getChannelCount();
