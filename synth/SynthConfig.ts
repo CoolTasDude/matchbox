@@ -1014,7 +1014,7 @@ export class Config {
     public static readonly beatsPerBarMin:              number = 1;
     public static readonly beatsPerBarMax:              number = 256; //slarmoo: 64
     public static readonly barCountMin:                 number = 1;
-    public static readonly barCountMax:                 number = 100000; //slarmoo: 1024, froupbox: 4096
+    public static readonly barCountMax:                 number = 20000; //slarmoo: 1024, froupbox: 4096
     public static readonly instrumentCountMin:          number = 1;
     public static readonly layeredInstrumentCountMax:   number = 20; //froupbox: 10
     public static readonly patternInstrumentCountMax:   number = 20; //froupbox: 10
