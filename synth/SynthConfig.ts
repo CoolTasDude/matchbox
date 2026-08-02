@@ -1335,7 +1335,7 @@ export class Config {
     public static readonly grainRangeMax: number = 1600;
     public static readonly grainAmountsMax: number = 10; //2^grainAmountsMax is what is actually used
     public static readonly granularEnvelopeType: number = GranularEnvelopeType.parabolic; //here you can change which envelope implementation is used for grains (RaisedCosineBell still needs work)
-    public static readonly chorusRange: number = 8;
+    public static readonly chorusRange: number = 8; // slarmoo: 8
     public static readonly chorusPeriodSeconds: number = 2.0;
     public static readonly chorusDelayRange: number = 0.0034;
     public static readonly chorusDelayOffsets: ReadonlyArray<ReadonlyArray<number>> = [[1.51, 2.10, 3.35], [1.47, 2.15, 3.25]];
@@ -2078,7 +2078,7 @@ export class Config {
             promptDesc: ["This setting controls the detune for this instrument, just like the detune slider.", "At $MID, your instrument will have no detune applied. Each tick corresponds to one cent, or one-hundredth of a pitch. Thus, each change of 100 ticks corresponds to one half-step of detune, up to two half-steps up at $HI, or two half-steps down at $LO.", "[OVERWRITING] [$LO - $HI] [cents]"] },
         { name: "vibrato depth", 
             pianoName: "Vibrato Depth", 
-            maxRawVol: 50, newNoteVol: 0, forSong: false, convertRealFactor: 0, associatedEffect: EffectType.vibrato, maxIndex: 0,
+            maxRawVol: 200, newNoteVol: 0, forSong: false, convertRealFactor: 0, associatedEffect: EffectType.vibrato, maxIndex: 0, 
             promptName: "Vibrato Depth", 
             promptDesc: ["This setting controls the amount that your pitch moves up and down by during vibrato, just like the vibrato depth slider.", "At $LO, your instrument will have no vibrato depth so its vibrato would be inaudible. This increases up to $HI, where an extreme pitch change will be noticeable.", "[OVERWRITING] [$LO - $HI] [pitch ÷25]"] },
         { name: "song detune", 
@@ -2088,7 +2088,7 @@ export class Config {
             promptDesc: ["This setting controls the overall detune of the entire song. There is no associated slider.", "At $MID, your song will have no extra detune applied and sound unchanged from default. Each tick corresponds to four cents, or four hundredths of a pitch. Thus, each change of 25 ticks corresponds to one half-step of detune, up to 10 half-steps up at $HI, or 10 half-steps down at $LO.", "[MULTIPLICATIVE] [$LO - $HI] [cents x4]"] },
         { name: "vibrato speed", 
             pianoName: "Vibrato Speed", 
-            maxRawVol: 30, newNoteVol: 0, forSong: false, convertRealFactor: 0, associatedEffect: EffectType.vibrato, maxIndex: 0,
+            maxRawVol: 120, newNoteVol: 0, forSong: false, convertRealFactor: 0, associatedEffect: EffectType.vibrato, maxIndex: 0,
             promptName: "Vibrato Speed", 
             promptDesc: ["This setting controls the speed your instrument will vibrato at, just like the slider.", "A setting of $LO means there will be no oscillation, and vibrato will be disabled. Higher settings will increase the speed, up to a dramatic trill at the max value, $HI.", "[OVERWRITING] [$LO - $HI]"] },
         { name: "vibrato delay", 

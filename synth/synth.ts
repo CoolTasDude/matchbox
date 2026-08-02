@@ -4025,8 +4025,8 @@ export class Song {
                     buffer.push(base64IntToCharCode[instrument.vibrato]);
                     // Custom vibrato settings
                     if (instrument.vibrato == Config.vibratos.length) {
-                        buffer.push(base64IntToCharCode[Math.round(instrument.vibratoDepth * 25)]);
-                        buffer.push(base64IntToCharCode[instrument.vibratoSpeed]);
+                        buffer.push(base64IntToCharCode[(Math.round(instrument.vibratoDepth * 25)) >> 6], base64IntToCharCode[(Math.round(instrument.vibratoDepth * 25)) & 0x3f]);
+                        buffer.push(base64IntToCharCode[instrument.vibratoSpeed >> 6], base64IntToCharCode[instrument.vibratoSpeed & 0x3f]);
                         buffer.push(base64IntToCharCode[Math.round(instrument.vibratoDelay)]);
                         buffer.push(base64IntToCharCode[instrument.vibratoType]);
                     }
@@ -5995,9 +5995,14 @@ export class Song {
                         instrument.vibrato = clamp(0, Config.vibratos.length + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
 
                         // Custom vibrato
-                        if (instrument.vibrato == Config.vibratos.length && (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox || fromMatchBox)) {
+                        if (instrument.vibrato == Config.vibratos.length && (fromJummBox || fromGoldBox || fromUltraBox || fromSlarmoosBox || fromFroupBox)) {
                             instrument.vibratoDepth = clamp(0, Config.modulators.dictionary["vibrato depth"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) / 25;
                             instrument.vibratoSpeed = clamp(0, Config.modulators.dictionary["vibrato speed"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                            instrument.vibratoDelay = clamp(0, Config.modulators.dictionary["vibrato delay"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                            instrument.vibratoType = clamp(0, Config.vibratoTypes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
+                        } else if (fromMatchBox) {
+                            instrument.vibratoDepth = clamp(0, Config.modulators.dictionary["vibrato depth"].maxRawVol + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]) / 25;
+                            instrument.vibratoSpeed = clamp(0, Config.modulators.dictionary["vibrato speed"].maxRawVol + 1, (base64CharCodeToInt[compressed.charCodeAt(charIndex++)] << 6) + base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             instrument.vibratoDelay = clamp(0, Config.modulators.dictionary["vibrato delay"].maxRawVol + 1, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                             instrument.vibratoType = clamp(0, Config.vibratoTypes.length, base64CharCodeToInt[compressed.charCodeAt(charIndex++)]);
                         }
